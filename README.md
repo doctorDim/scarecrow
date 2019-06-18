@@ -1,1 +1,1 @@
-# scarecrow
+# Scarecrow for the garden
