@@ -1,3 +1,5 @@
+# https://www.pyimagesearch.com/2015/11/09/pedestrian-detection-opencv/
+
 # import the necessary packages
 from __future__ import print_function
 from imutils.object_detection import non_max_suppression
@@ -21,7 +23,7 @@ for imagePath in paths.list_images(args["images"]):
 	# load the image and resize it to (1) reduce detection time
 	# and (2) improve detection accuracy
 	image = cv2.imread(imagePath)
-	image = imutils.resize(image, width=min(400, image.shape[1]))
+	image = imutils.resize(image, width=min(800, image.shape[1]))
 	orig = image.copy()
 
 	# detect people in the image
@@ -41,6 +43,9 @@ for imagePath in paths.list_images(args["images"]):
 	# draw the final bounding boxes
 	for (xA, yA, xB, yB) in pick:
 		cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
+		# Center of rectangle
+		centerX, centerY = int((xB - xA)/2+xA), int((yB - yA)/2+yA)
+		cv2.circle(image, (centerX, centerY), 5, (0, 0, 255), 2)
 
 	# show some information on the number of bounding boxes
 	filename = imagePath[imagePath.rfind("/") + 1:]
