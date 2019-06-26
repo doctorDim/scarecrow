@@ -90,10 +90,17 @@ if __name__ == '__main__':
 
 	if args["videos"] is not None:
 		cap = cv2.VideoCapture(args["videos"])
-		#cap.set(cv2.CAP_PROP_POS_MSEC, 5000)
+		
+		# What is fps?
+		#fps = cap.get(cv2.CAP_PROP_FPS)
+		#print(fps)
+
+		# Set new fps
+		#cap.set(cv2.CAP_PROP_FPS, 10)
+		#fps = cap.get(cv2.CAP_PROP_FPS)
+		#print(fps)
 
 		while(cap.isOpened()):
-
 			_, frame = cap.read()
 
 			img = np.copy(frame)
