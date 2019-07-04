@@ -53,12 +53,12 @@ def image_detect(path):
 			filename, len(rects), len(pick)))
 
 		# show the output images
-		cv2.imshow("Before NMS", orig)
+		#cv2.imshow("Before NMS", orig)
 		cv2.imshow("After NMS", image)
 		cv2.waitKey(0)
 
 
-# initialize the HOG descriptor/person detector for images
+# initialize the HOG descriptor/person detector for video 
 def video(img):
 	image = np.copy(img)
 	hog = cv2.HOGDescriptor()
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 		#print(fps)
 
 		# Set new fps
-		#cap.set(cv2.CAP_PROP_FPS, 10)
+		#cap.set(cv2.CAP_PROP_FPS, 5)
 		#fps = cap.get(cv2.CAP_PROP_FPS)
 		#print(fps)
 
