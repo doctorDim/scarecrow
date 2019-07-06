@@ -82,7 +82,10 @@ def video(img):
 		centerX, centerY = int((xB - xA)/2+xA), int((yB - yA)/2+yA)
 		cv2.circle(image, (centerX, centerY), 5, (0, 0, 255), 2)
 
-	return image
+	return image, centerX, centerY
+
+# Rotate camera
+#def rotate():
 
 if __name__ == '__main__':
 
@@ -122,14 +125,15 @@ if __name__ == '__main__':
 	    '''
 
 		# COM port
-		ser = serial.Serial('/dev/ttyACM0',9600,timeout=5)
-	    ser.isOpen()		
+		#ser = serial.Serial('/dev/ttyACM0',9600,timeout=5)
+	    #ser.isOpen()
 
 		while(cap.isOpened()):
 			_, frame = cap.read()
 
 			img = np.copy(frame)
-			image = video(img)
+			image, X, Y = video(img)
+			print(X, Y)
 
 			cv2.imshow('Video', image)
 
