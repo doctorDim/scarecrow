@@ -7,94 +7,130 @@ import os
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser(description='Persons detector.')
-ap.add_argument("-i", "--images", required=False, help="path to images directory")
-ap.add_argument("-v", "--videos", type = int, required=False, help="number of Web-camera")
+ap.add_argument("-v", "--video", type = int, required=True,
+	help="number of Web-camera")
+ap.add_argument("-y", "--yolo", required=True,
+	help="base path to YOLO directory")
+ap.add_argument("-c", "--confidence", type=float, default=0.5,
+	help="minimum probability to filter weak detections")
+ap.add_argument("-t", "--threshold", type=float, default=0.3,
+	help="threshold when applying non-maxima suppression")
 args = vars(ap.parse_args())
 
-# initialize the HOG descriptor/person detector for images
-def image_detect(path):
-	hog = cv2.HOGDescriptor()
-	hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+# Find from Web-camera
+def search(img):
 
-	# loop over the image paths
-	for imagePath in paths.list_images(path):
-		# load the image and resize it to (1) reduce detection time
-		# and (2) improve detection accuracy
-		image = cv2.imread(imagePath)
-		image = imutils.resize(image, width=min(800, image.shape[1]))
-		orig = image.copy()
+	# determine only the *output* layer names that we need from YOLO
+	ln = net.getLayerNames()
+	ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
-		# detect people in the image
-		(rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
-			padding=(8, 8), scale=1.05)
+	# construct a blob from the input image and then perform a forward
+	# pass of the YOLO object detector, giving us our bounding boxes and
+	# associated probabilities
+	blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+	net.setInput(blob)
+	start = time.time()
+	layerOutputs = net.forward(ln)
+	end = time.time()
 
-		# draw the original bounding boxes
-		for (x, y, w, h) in rects:
-			cv2.rectangle(orig, (x, y), (x + w, y + h), (0, 0, 255), 2)
+	# show timing information on YOLO
+	print("[INFO] YOLO took {:.6f} seconds".format(end - start))
 
-		# apply non-maxima suppression to the bounding boxes using a
-		# fairly large overlap threshold to try to maintain overlapping
-		# boxes that are still people
-		rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
-		pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
+	# initialize our lists of detected bounding boxes, confidences, and
+	# class IDs, respectively
+	boxes = []
+	confidences = []
+	classIDs = []
 
-		# draw the final bounding boxes
-		for (xA, yA, xB, yB) in pick:
-			cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
-			# Center of rectangle
-			centerX, centerY = int((xB - xA)/2+xA), int((yB - yA)/2+yA)
-			cv2.circle(image, (centerX, centerY), 5, (0, 0, 255), 2)
+	# loop over each of the layer outputs
+	for output in layerOutputs:
+		# loop over each of the detections
+		for detection in output:
+			# extract the class ID and confidence (i.e., probability) of
+			# the current object detection
+			scores = detection[5:]
+			classID = np.argmax(scores)
+			confidence = scores[classID]
 
-		# show some information on the number of bounding boxes
-		filename = imagePath[imagePath.rfind("/") + 1:]
-		print("[INFO] {}: {} original boxes, {} after suppression".format(
-			filename, len(rects), len(pick)))
+			## find only person == 0, dog == 16
+			##if classID == 16:
 
-		# show the output images
-		#cv2.imshow("Before NMS", orig)
-		cv2.imshow("After NMS", image)
-		cv2.waitKey(0)
+			# filter out weak predictions by ensuring the detected
+			# probability is greater than the minimum probability
+			if confidence > args["confidence"]:
+				# scale the bounding box coordinates back relative to the
+				# size of the image, keeping in mind that YOLO actually
+				# returns the center (x, y)-coordinates of the bounding
+				# box followed by the boxes' width and height
+				box = detection[0:4] * np.array([W, H, W, H])
+				(centerX, centerY, width, height) = box.astype("int")
+
+				# use the center (x, y)-coordinates to derive the top and
+				# and left corner of the bounding box
+				x = int(centerX - (width / 2))
+				y = int(centerY - (height / 2))
+				print("center coordinat: ", x, y)
+
+				# update our list of bounding box coordinates, confidences,
+				# and class IDs
+				boxes.append([x, y, int(width), int(height)])
+				confidences.append(float(confidence))
+				classIDs.append(classID)
+				#print("@classIDs: ", classIDs)
+
+	# apply non-maxima suppression to suppress weak, overlapping bounding
+	# boxes
+	idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
+
+	# ensure at least one detection exists
+	if len(idxs) > 0:
+		# loop over the indexes we are keeping
+		for i in idxs.flatten():
+			# extract the bounding box coordinates
+			(x, y) = (boxes[i][0], boxes[i][1])
+			(w, h) = (boxes[i][2], boxes[i][3])
+
+			## draw only Person
+			##if LABELS[classIDs[i]] == "person":
+
+			# draw a bounding box rectangle and label on the image
+			color = [int(c) for c in COLORS[classIDs[i]]]
+			cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+			text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+			cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
-# initialize the HOG descriptor/person detector for video
-def video(img):
-	image = np.copy(img)
-	hog = cv2.HOGDescriptor()
-	hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-
-	# detect people in the image
-	(rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
-		padding=(8, 8), scale=1.05)
-
-	# apply non-maxima suppression to the bounding boxes using a
-	# fairly large overlap threshold to try to maintain overlapping
-	# boxes that are still people
-	rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
-	pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
-
-	# draw the final bounding boxes
-	for (xA, yA, xB, yB) in pick:
-		cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
-		# Center of rectangle
-		centerX, centerY = int((xB - xA)/2+xA), int((yB - yA)/2+yA)
-		cv2.circle(image, (centerX, centerY), 5, (0, 0, 255), 2)
-
-	return image, centerX, centerY
+	return image
 
 if __name__ == '__main__':
 
-	if args["images"] is not None:
-		image_detect(args["images"])
+	# load the COCO class labels our YOLO model was trained on
+	labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
+	LABELS = open(labelsPath).read().strip().split("\n")
+	#print("LABELS: ", LABELS)
+	#print("len(LABELS): ", len(LABELS))
 
-	if args["videos"] is not None:
-		cap = cv2.VideoCapture(args["videos"])
+	# initialize a list of colors to represent each possible class label
+	np.random.seed(42)
+	COLORS = np.random.randint(0, 255, size=(len(LABELS), 3), dtype="uint8")
+
+	# derive the paths to the YOLO weights and model configuration
+	weightsPath = os.path.sep.join([args["yolo"], "yolov3-tiny.weights"])
+	configPath = os.path.sep.join([args["yolo"], "yolov3-tiny.cfg"])
+
+	# load our YOLO object detector trained on COCO dataset (80 classes)
+	print("[INFO] loading YOLO from disk...")
+	net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+
+
+	if args["video"] is not None:
+		cap = cv2.VideoCapture(args["video"])
 
 		while(cap.isOpened()):
 			_, frame = cap.read()
 
-			img = np.copy(frame)
-			image, X, Y = video(img)
-			print(X, Y)
+			image = np.copy(frame)
+			image = search(image)
 
 			cv2.imshow('Video', image)
 
