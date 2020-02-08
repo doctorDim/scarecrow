@@ -69,7 +69,6 @@ def search(img):
 				# and left corner of the bounding box
 				x = int(centerX - (width / 2))
 				y = int(centerY - (height / 2))
-				print("center coordinat: ", x, y)
 
 				# update our list of bounding box coordinates, confidences,
 				# and class IDs
@@ -98,7 +97,7 @@ def search(img):
 			cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 			text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 			cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
+			cv2.circle(image, (centerX, centerY), 5, color, 2)
 
 	return image
 
@@ -130,6 +129,7 @@ if __name__ == '__main__':
 			_, frame = cap.read()
 
 			image = np.copy(frame)
+			(H, W) = image.shape[:2]
 			image = search(image)
 
 			cv2.imshow('Video', image)
