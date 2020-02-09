@@ -17,6 +17,22 @@ ap.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applying non-maxima suppression")
 args = vars(ap.parse_args())
 
+# Hand up
+def up():
+	return 0
+
+# Hand down
+def down():
+	return 0
+
+# Left
+def left():
+	return 0
+
+# Right
+def right():
+	return 0
+
 # Find from Web-camera
 def search(img):
 
