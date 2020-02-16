@@ -27,12 +27,12 @@ def down():
 	print("v")
 	return 0
 
-# Left
+# Move scarecrow to the left
 def left():
 	print("<--")
 	return 0
 
-# Right
+# Move scarecrow to the right
 def right():
 	print("-->")
 	return 0
@@ -92,7 +92,7 @@ def search(img):
 				# box followed by the boxes' width and height
 				box = detection[0:4] * np.array([W, H, W, H])
 				(centerX, centerY, width, height) = box.astype("int")
-				#print("x, y: ", centerX, centerY)
+				print("x, y: ", centerX, centerY, width, height)
 
 				# use the center (x, y)-coordinates to derive the top and
 				# and left corner of the bounding box
@@ -109,12 +109,15 @@ def search(img):
 				# if find person, then hand up
 				up();
 
-				#Move to the center
-				if centerX <= W/2:
-					left()
+				# ignoring people in the distance
+				if height > H/3:
 
-				if centerX > W/2:
-					right()
+					#Move to the center
+					if centerX <= W/2:
+						left()
+
+					if centerX > W/2:
+						right()
 
 	# apply non-maxima suppression to suppress weak, overlapping bounding
 	# boxes
