@@ -19,18 +19,26 @@ args = vars(ap.parse_args())
 
 # Hand up
 def up():
+	print("^")
 	return 0
 
 # Hand down
 def down():
+	print("v")
 	return 0
 
 # Left
 def left():
+	print("<--")
 	return 0
 
 # Right
 def right():
+	print("-->")
+	return 0
+
+# Move
+def move():
 	return 0
 
 # Find from Web-camera
@@ -66,20 +74,25 @@ def search(img):
 			# the current object detection
 			scores = detection[5:]
 			classID = np.argmax(scores)
-			confidence = scores[classID]
+			#find all classes
+			#confidence = scores[classID]
 
-			## find only person == 0, dog == 16
-			##if classID == 16:
+			# find only person == 0, dog == 16, ...
+			confidence = scores[0]
 
 			# filter out weak predictions by ensuring the detected
 			# probability is greater than the minimum probability
 			if confidence > args["confidence"]:
+
+				#print("confidence: ", confidence)
+
 				# scale the bounding box coordinates back relative to the
 				# size of the image, keeping in mind that YOLO actually
 				# returns the center (x, y)-coordinates of the bounding
 				# box followed by the boxes' width and height
 				box = detection[0:4] * np.array([W, H, W, H])
 				(centerX, centerY, width, height) = box.astype("int")
+				#print("x, y: ", centerX, centerY)
 
 				# use the center (x, y)-coordinates to derive the top and
 				# and left corner of the bounding box
@@ -92,6 +105,16 @@ def search(img):
 				confidences.append(float(confidence))
 				classIDs.append(classID)
 				#print("@classIDs: ", classIDs)
+
+				# if find person, then hand up
+				up();
+
+				#Move to the center
+				if centerX <= W/2:
+					left()
+
+				if centerX > W/2:
+					right()
 
 	# apply non-maxima suppression to suppress weak, overlapping bounding
 	# boxes
@@ -118,6 +141,8 @@ def search(img):
 	return image
 
 if __name__ == '__main__':
+
+	down()
 
 	# load the COCO class labels our YOLO model was trained on
 	labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
